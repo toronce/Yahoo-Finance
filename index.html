@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alpha Vantage 재무제표 분석기</title>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    
+    <style>
+        .hidden { display: none !important; }
+        .animate-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        
+        .company-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .company-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .api-setup {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto p-4 max-w-6xl">
+        <!-- API 키 설정 -->
+        <div id="apiSetup" class="api-setup text-white rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-bold mb-4">
+                <i class="fas fa-key mr-2"></i>Alpha Vantage API 키 설정
+            </h2>
+            
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="font-semibold mb-2">1️⃣ 무료 API 키 받기</h3>
+                    <p class="text-sm opacity-90 mb-3">
+                        Alpha Vantage에서 무료 API 키를 받아주세요 (월 500회 무료)
+                    </p>
+                    <a href="https://www.alphavantage.co/support/#api-key" target="_blank" 
+                       class="inline-block bg-white text-purple-600 px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-external-link-alt mr-2"></i>무료 API 키 받기
+                    </a>
+                </div>
+                
+                <div>
+                    <h3 class="font-semibold mb-2">2️⃣ API 키 입력</h3>
+                    <div class="flex gap-2">
+                        <input type="text" id="apiKeyInput" placeholder="API 키를 입력하세요" 
+                               class="flex-1 px-3 py-2 text-black rounded-lg">
+                        <button onclick="saveApiKey()" 
+                                class="bg-green-500 hover:bg-green-600 px-4 py-2 rounded-lg font-medium transition-colors">
+                            저장
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 헤더 -->
+        <header class="text-center mb-8 bg-white rounded-lg shadow-md p-6">
+            <h1 class="text-3xl font-bold text-blue-600 mb-2">
+                <i class="fas fa-chart-line mr-2"></i>실제 재무제표 분석기
+            </h1>
+            <p class="text-gray-600">Alpha Vantage API로 실제 재무데이터를 분석합니다!</p>
+            <div id="apiStatus" class="mt-3 text-sm">
+                <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full">
+                    <i class="fas fa-exclamation-circle mr-1"></i>API 키가 필요합니다
+                </span>
+            </div>
+        </header>
+
+        <!-- 분석 도구 -->
+        <div id="analysisTools" class="hidden">
+            <!-- 기업 검색 -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4 text-center">
+                    <i class="fas fa-search mr-2 text-blue-500"></i>기업 검색
+                </h2>
+                
+                <!-- 안내 문구 추가 -->
+                <div class="text-center text-blue-700 font-semibold mb-2">
+                    ※ 미국 상장기업(티커)만 검색 가능합니다.
+                </div>
+                
+                <div class="max-w-md mx-auto mb-6">
+                    <div class="relative">
+                        <input type="text" id="searchInput" placeholder="미국 주식 티커 입력 (예: AAPL, MSFT)" 
+                               class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                               onkeypress="handleEnterKey(event)">
+                        <button onclick="searchCompany()" 
+                                class="absolute right-2 top-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 인기 기업 -->
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                    <div class="company-card bg-blue-50 p-3 rounded-lg border-2 border-blue-200" onclick="analyzeCompany('AAPL')">
+                        <div class="text-center">
+                            <div class="text-xl mb-1">🍎</div>
+                            <div class="font-semibold text-blue-800 text-sm">Apple</div>
+                            <div class="text-xs text-blue-600">AAPL</div>
+                        </div>
+                    </div>
+                    
+                    <div class="company-card bg-green-50 p-3 rounded-lg border-2 border-green-200" onclick="analyzeCompany('MSFT')">
+                        <div class="text-center">
+                            <div class="text-xl mb-1">🪟</div>
+                            <div class="font-semibold text-green-800 text-sm">Microsoft</div>
+                            <div class="text-xs text-green-600">MSFT</div>
+                        </div>
+                    </div>
+                    
+                    <div class="company-card bg-red-50 p-3 rounded-lg border-2 border-red-200" onclick="analyzeCompany('GOOGL')">
+                        <div class="text-center">
+                            <div class="text-xl mb-1">🔍</div>
+                            <div class="font-semibold text-red-800 text-sm">Google</div>
+                            <div class="text-xs text-red-600">GOOGL</div>
+                        </div>
+                    </div>
+
+                    <div class="company-card bg-purple-50 p-3 rounded-lg border-2 border-purple-200" onclick="analyzeCompany('TSLA')">
+                        <div class="text-center">
+                            <div class="text-xl mb-1">⚡</div>
+                            <div class="font-semibold text-purple-800 text-sm">Tesla</div>
+                            <div class="text-xs text-purple-600">TSLA</div>
+                        </div>
+                    </div>
+
+                    <div class="company-card bg-indigo-50 p-3 rounded-lg border-2 border-indigo-200" onclick="analyzeCompany('AMZN')">
+                        <div class="text-center">
+                            <div class="text-xl mb-1">📦</div>
+                            <div class="font-semibold text-indigo-800 text-sm">Amazon</div>
+                            <div class="text-xs text-indigo-600">AMZN</div>
+                        </div>
+                    </div>
+
+                    <div class="company-card bg-yellow-50 p-3 rounded-lg border-2 border-yellow-200" onclick="analyzeCompany('NVDA')">
+                        <div class="text-center">
+                            <div class="text-xl mb-1">🎮</div>
+                            <div class="font-semibold text-yellow-800 text-sm">NVIDIA</div>
+                            <div class="text-xs text-yellow-600">NVDA</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- API 사용량 -->
+                <div class="mt-6 text-center">
+                    <span class="text-sm text-gray-600">
+                        API 사용량: <span id="apiUsage" class="font-semibold text-blue-600">0</span>/25 (세션)
+                    </span>
+                </div>
+            </div>
+
+            <!-- 로딩 -->
+            <div id="loading" class="hidden text-center py-12">
+                <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
+                <p class="text-gray-600 text-lg">Alpha Vantage에서 실제 데이터 가져오는 중...</p>
+                <div class="mt-2">
+                    <div class="bg-blue-200 rounded-full h-2 w-64 mx-auto">
+                        <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 에러 메시지 -->
+            <div id="errorMessage" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    <span id="errorText"></span>
+                </div>
+            </div>
+
+            <!-- 분석 결과 -->
+            <div id="analysisResult" class="hidden">
+                <!-- 기업 정보 -->
+                <div class="bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg p-6 mb-6">
+                    <h2 id="companyName" class="text-2xl font-bold mb-2"></h2>
+                    <p id="companyInfo" class="opacity-90"></p>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                        <div class="text-center">
+                            <div id="marketCap" class="text-lg font-bold">-</div>
+                            <div class="text-sm opacity-90">시가총액</div>
+                        </div>
+                        <div class="text-center">
+                            <div id="peRatio" class="text-lg font-bold">-</div>
+                            <div class="text-sm opacity-90">PER</div>
+                        </div>
+                        <div class="text-center">
+                            <div id="dividendYield" class="text-lg font-bold">-</div>
+                            <div class="text-sm opacity-90">배당률</div>
+                        </div>
+                        <div class="text-center">
+                            <div id="bookValue" class="text-lg font-bold">-</div>
+                            <div class="text-sm opacity-90">장부가</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 재무제표 -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold mb-4">손익계산서</h3>
+                        <div id="incomeStatement" class="space-y-3">
+                            <!-- 동적 생성 -->
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold mb-4">재무상태표</h3>
+                        <div id="balanceSheet" class="space-y-3">
+                            <!-- 동적 생성 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 차트 -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold mb-4 text-center">재무 성과 차트</h3>
+                    <div class="relative h-96">
+                        <canvas id="financialChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 전역 변수 (메모리만 사용)
+        let currentChart = null;
+        let apiKey = null;
+        let apiUsageCount = 0;
+        let loadingProgress = null;
+
+        // API 키 저장 (메모리만)
+        async function saveApiKey() {
+            const keyInput = document.getElementById('apiKeyInput');
+            const key = keyInput.value.trim();
+            
+            if (!key) {
+                alert('API 키를 입력해주세요.');
+                return;
+            }
+
+            // API 키 형식 검사
+            if (key.length < 10) {
+                alert('API 키가 올바르지 않습니다. Alpha Vantage에서 발급받은 키를 입력해주세요.');
+                return;
+            }
+            
+            showLoading(true, 'API 키 유효성 검사 중...');
+            
+            try {
+                // API 키 테스트
+                const testUrl = `http://localhost:3000/av?function=TIME_SERIES_INTRADAY&symbol=IBM&interval=5min&apikey=${key}`;
+                console.log('🔍 API 키 테스트 요청:', testUrl.replace(key, '***'));
+                
+                const response = await fetch(testUrl);
+                const data = await response.json();
+                
+                if (data['Note'] || data['Error Message'] || data['Information']) {
+                    throw new Error('API 키가 유효하지 않습니다.');
+                }
+                
+                // API 키 저장
+                apiKey = key;
+                
+                document.getElementById('apiSetup').style.display = 'none';
+                document.getElementById('analysisTools').classList.remove('hidden');
+                document.getElementById('apiStatus').innerHTML = `
+                    <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full">
+                        <i class="fas fa-check-circle mr-1"></i>API 키 설정됨
+                    </span>
+                `;
+                
+                showSuccess('✅ API 키 설정 완료! 이제 기업을 검색해보세요.');
+                
+            } catch (error) {
+                console.error('API 키 테스트 실패:', error);
+                showError(`API 키 테스트 실패: ${error.message}<br>
+                    <span class="block mt-2 text-sm">💡 다음을 확인해주세요:</span>
+                    <ul class="list-disc list-inside mt-1 text-sm">
+                        <li>API 키가 올바른지 확인</li>
+                        <li>프록시 서버가 실행 중인지 확인</li>
+                        <li>브라우저 콘솔(F12)에서 자세한 오류 확인</li>
+                    </ul>`);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 엔터키 처리
+        function handleEnterKey(event) {
+            if (event.key === 'Enter') {
+                searchCompany();
+            }
+        }
+
+        // 기업 검색
+        function searchCompany() {
+            const symbol = document.getElementById('searchInput').value.trim().toUpperCase();
+            if (!symbol) {
+                showError('티커 심볼을 입력해주세요.');
+                return;
+            }
+            analyzeCompany(symbol);
+        }
+
+        // 기업 분석 (yfinance 연동)
+        async function analyzeCompany(symbol) {
+            hideError();
+            showLoading(true, `${symbol} 실제 데이터 분석 중...`);
+            hideResult();
+            try {
+                const url = `/stock?symbol=${symbol}`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('서버 오류');
+                const data = await response.json();
+                displayFinancialData(symbol, data.info, data.financials);
+                createPriceChart(symbol);
+                showResult();
+                showSuccess(`✅ ${data.info.shortName || symbol} 분석 완료!`);
+            } catch (error) {
+                showError(`분석 실패: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 데이터 표시 (NaN 처리)
+        function displayFinancialData(symbol, info, financials) {
+            document.getElementById('companyName').textContent = info.shortName || symbol;
+            document.getElementById('companyInfo').textContent = `${symbol} | ${info.sector || '데이터 없음'} | ${info.country || '데이터 없음'}`;
+            document.getElementById('marketCap').textContent = formatNumber(info.marketCap) || '데이터 없음';
+            document.getElementById('peRatio').textContent = isValidNumber(info.trailingPE) ? info.trailingPE.toFixed(1) + '배' : '데이터 없음';
+            document.getElementById('dividendYield').textContent = isValidNumber(info.dividendYield) ? (info.dividendYield * 100).toFixed(2) + '%' : '데이터 없음';
+            document.getElementById('bookValue').textContent = isValidNumber(info.bookValue) ? '$' + info.bookValue.toFixed(2) : '데이터 없음';
+            // 손익계산서(최근 연도)
+            const years = Object.keys(financials || {});
+            const latest = years.length > 0 ? financials[years[0]] : {};
+            const incomeItems = [
+                { name: '매출액', value: latest['Total Revenue'] },
+                { name: '영업이익', value: latest['Operating Income'] },
+                { name: '순이익', value: latest['Net Income'] },
+                { name: 'EPS', value: latest['Basic EPS'] }
+            ];
+            displayItems('incomeStatement', incomeItems);
+            // 재무상태표(최근 연도)
+            const balanceItems = [
+                { name: '총자산', value: latest['Total Assets'] },
+                { name: '총부채', value: latest['Total Liabilities'] },
+                { name: '주주지분', value: latest['Total Equity Gross Minority Interest'] },
+                { name: '현금', value: latest['Cash And Cash Equivalents'] }
+            ];
+            displayItems('balanceSheet', balanceItems);
+        }
+
+        function isValidNumber(val) {
+            return val !== undefined && val !== null && val !== 'None' && !isNaN(val);
+        }
+
+        function displayItems(containerId, items) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            let html = '';
+            items.forEach(item => {
+                let displayValue = '데이터 없음';
+                if (isValidNumber(item.value)) {
+                    displayValue = formatNumber(item.value);
+                }
+                html += `
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span class="font-medium text-gray-700">${item.name}</span>
+                        <span class="font-bold text-blue-600">${displayValue}</span>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        // 시세 차트 (yfinance history)
+        async function createPriceChart(symbol) {
+            const ctx = document.getElementById('financialChart');
+            if (!ctx) return;
+            try {
+                if (currentChart) {
+                    currentChart.destroy();
+                    currentChart = null;
+                }
+                // yfinance history API 호출
+                const url = `/stock?symbol=${symbol}&history=1y`;
+                const response = await fetch(url);
+                const data = await response.json();
+                const hist = data.history || {};
+                const dates = Object.keys(hist);
+                const prices = dates.map(date => hist[date]?.close || null);
+                if (dates.length === 0) {
+                    ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+                    ctx.getContext('2d').fillText('차트 데이터가 없습니다', ctx.width / 2, ctx.height / 2);
+                    return;
+                }
+                currentChart = new Chart(ctx.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: dates,
+                        datasets: [{
+                            label: '종가(달러)',
+                            data: prices,
+                            borderColor: 'rgb(59, 130, 246)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.2,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: '1년간 주가(종가) 추이',
+                                font: { size: 16 }
+                            },
+                            legend: { display: true, position: 'top' }
+                        },
+                        scales: {
+                            y: { beginAtZero: false, title: { display: true, text: '달러($)' } },
+                            x: { title: { display: true, text: '날짜' } }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('차트 생성 오류:', error);
+            }
+        }
+
+        // 숫자 포맷팅
+        function formatNumber(num) {
+            if (!num || isNaN(num) || num === 'None') return 'N/A';
+            
+            const numValue = parseFloat(num);
+            const absNum = Math.abs(numValue);
+            
+            if (absNum >= 1e12) return '$' + (numValue / 1e12).toFixed(1) + 'T';
+            if (absNum >= 1e9) return '$' + (numValue / 1e9).toFixed(1) + 'B';
+            if (absNum >= 1e6) return '$' + (numValue / 1e6).toFixed(1) + 'M';
+            if (absNum >= 1e3) return '$' + (numValue / 1e3).toFixed(1) + 'K';
+            
+            return '$' + numValue.toLocaleString();
+        }
+
+        // 로딩 표시
+        function showLoading(show, message = '처리 중...') {
+            const loading = document.getElementById('loading');
+            if (!loading) return;
+            
+            if (show) {
+                loading.classList.remove('hidden');
+                const loadingText = loading.querySelector('p');
+                if (loadingText) loadingText.textContent = message;
+                startProgress();
+            } else {
+                loading.classList.add('hidden');
+                stopProgress();
+            }
+        }
+
+        // 진행바
+        function startProgress() {
+            const progressBar = document.getElementById('progressBar');
+            if (!progressBar) return;
+            
+            let progress = 0;
+            
+            if (loadingProgress) {
+                clearInterval(loadingProgress);
+            }
+            
+            loadingProgress = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress > 95) progress = 95;
+                progressBar.style.width = progress + '%';
+            }, 300);
+        }
+
+        function stopProgress() {
+            if (loadingProgress) {
+                clearInterval(loadingProgress);
+                loadingProgress = null;
+                
+                const progressBar = document.getElementById('progressBar');
+                if (progressBar) {
+                    progressBar.style.width = '100%';
+                    setTimeout(() => {
+                        progressBar.style.width = '0%';
+                    }, 500);
+                }
+            }
+        }
+
+        // API 사용량 업데이트 (메모리만)
+        function updateApiUsage() {
+            apiUsageCount++;
+            const usageElement = document.getElementById('apiUsage');
+            if (usageElement) {
+                usageElement.textContent = apiUsageCount;
+                
+                if (apiUsageCount >= 25) {
+                    usageElement.className = 'font-semibold text-red-600';
+                    showError('⚠️ 일일 API 호출 한도(25회)에 도달했습니다. 내일 다시 시도하거나 새로운 API 키를 발급받으세요.');
+                } else if (apiUsageCount >= 20) {
+                    usageElement.className = 'font-semibold text-red-600';
+                    showError('⚠️ 일일 API 호출 한도가 거의 소진되었습니다. (현재: ' + apiUsageCount + '/25)');
+                } else if (apiUsageCount >= 15) {
+                    usageElement.className = 'font-semibold text-yellow-600';
+                    showError('⚠️ 일일 API 호출 한도가 많이 소진되었습니다. (현재: ' + apiUsageCount + '/25)');
+                } else {
+                    usageElement.className = 'font-semibold text-blue-600';
+                }
+            }
+        }
+
+        // 결과 표시/숨기기
+        function showResult() {
+            const result = document.getElementById('analysisResult');
+            if (result) {
+                result.classList.remove('hidden');
+                result.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        function hideResult() {
+            const result = document.getElementById('analysisResult');
+            if (result) {
+                result.classList.add('hidden');
+            }
+        }
+
+        // 에러 처리
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            
+            if (errorDiv && errorText) {
+                // API 키 관련 오류에 대해 추가 안내 포함
+                if (message.includes('API 키가 유효하지 않') || message.includes('Invalid API call')) {
+                    message += `<br><span class="block mt-2 text-sm">💡 다음 중 하나를 시도해보세요:</span>
+                        <ul class="list-disc list-inside mt-1 text-sm">
+                            <li><a href="https://www.alphavantage.co/support/#api-key" target="_blank" class="underline">새로운 API 키 발급받기</a></li>
+                            <li>다른 API 키로 변경하기</li>
+                            <li>24시간 후에 다시 시도하기</li>
+                        </ul>`;
+                }
+                
+                // API 사용량 초과 관련 오류
+                if (message.includes('API call frequency') || message.includes('rate limit')) {
+                    message += `<br><span class="block mt-2 text-sm">💡 무료 API는 일일 25회로 제한됩니다. 다음 중 하나를 시도해보세요:</span>
+                        <ul class="list-disc list-inside mt-1 text-sm">
+                            <li>24시간 후에 다시 시도하기</li>
+                            <li><a href="https://www.alphavantage.co/support/#api-key" target="_blank" class="underline">새로운 API 키 발급받기</a></li>
+                            <li><a href="https://www.alphavantage.co/premium/" target="_blank" class="underline">프리미엄 플랜 구독하기</a></li>
+                        </ul>`;
+                }
+                
+                errorText.innerHTML = message;
+                errorDiv.classList.remove('hidden');
+                errorDiv.scrollIntoView({ behavior: 'smooth' });
+                
+                // 8초 후 자동으로 숨김
+                setTimeout(() => hideError(), 8000);
+            }
+        }
+
+        function hideError() {
+            const errorDiv = document.getElementById('errorMessage');
+            if (errorDiv) {
+                errorDiv.classList.add('hidden');
+            }
+        }
+
+        // 성공 메시지
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+            successDiv.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${message}`;
+            
+            document.body.appendChild(successDiv);
+            
+            setTimeout(() => {
+                if (document.body.contains(successDiv)) {
+                    document.body.removeChild(successDiv);
+                }
+            }, 4000);
+        }
+
+        // 초기화 (localStorage 완전 제거)
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Alpha Vantage 분석기 준비 완료!');
+            
+            // 디버깅 정보 표시
+            console.log('브라우저 정보:', navigator.userAgent);
+            console.log('현재 URL:', window.location.href);
+            
+            // API 키가 URL 파라미터에 있는지 확인
+            const urlParams = new URLSearchParams(window.location.search);
+            const keyFromUrl = urlParams.get('apikey');
+            if (keyFromUrl) {
+                console.log('URL에서 API 키를 찾았습니다!');
+                document.getElementById('apiKeyInput').value = keyFromUrl;
+                saveApiKey();
+            }
+            
+            // 개발자 도구 확인 안내
+            console.log('%c🛠️ 분석에 실패한다면 개발자 도구(F12)의 콘솔 탭을 확인해주세요!', 'color: red; font-weight: bold; font-size: 14px;');
+            console.log('%c✅ URL에 ?apikey=YOUR_API_KEY를 추가하면 자동으로 API 키가 설정됩니다!', 'color: green; font-weight: bold; font-size: 14px;');
+
+            document.getElementById('apiSetup').style.display = 'none';
+            document.getElementById('analysisTools').classList.remove('hidden');
+        });
+
+        // 정리
+        window.addEventListener('beforeunload', function() {
+            if (currentChart) {
+                currentChart.destroy();
+                currentChart = null;
+            }
+            if (loadingProgress) {
+                clearInterval(loadingProgress);
+                loadingProgress = null;
+            }
+        });
+    </script>
+</body>
+</html>
