@@ -320,11 +320,11 @@
             showLoading(true, `${symbol} 실제 데이터 분석 중...`);
             hideResult();
             try {
-                const url = `/stock?symbol=${symbol}`;
+                const url = `http://localhost:3000/stock?symbol=${symbol}`;
                 const response = await fetch(url);
                 if (!response.ok) throw new Error('서버 오류');
                 const data = await response.json();
-                displayFinancialData(symbol, data.info, data.financials);
+                displayFinancialData(symbol, data.info, data.financials, data.balance_sheet);
                 createPriceChart(symbol);
                 showResult();
                 showSuccess(`✅ ${data.info.shortName || symbol} 분석 완료!`);
@@ -336,7 +336,7 @@
         }
 
         // 데이터 표시 (NaN 처리)
-        function displayFinancialData(symbol, info, financials) {
+        function displayFinancialData(symbol, info, financials, balanceSheet) {
             document.getElementById('companyName').textContent = info.shortName || symbol;
             document.getElementById('companyInfo').textContent = `${symbol} | ${info.sector || '데이터 없음'} | ${info.country || '데이터 없음'}`;
             document.getElementById('marketCap').textContent = formatNumber(info.marketCap) || '데이터 없음';
@@ -353,12 +353,14 @@
                 { name: 'EPS', value: latest['Basic EPS'] }
             ];
             displayItems('incomeStatement', incomeItems);
-            // 재무상태표(최근 연도)
+            // 재무상태표(최근 연도, balanceSheet 활용)
+            const bYears = Object.keys(balanceSheet || {});
+            const bLatest = bYears.length > 0 ? balanceSheet[bYears[0]] : {};
             const balanceItems = [
-                { name: '총자산', value: latest['Total Assets'] },
-                { name: '총부채', value: latest['Total Liabilities'] },
-                { name: '주주지분', value: latest['Total Equity Gross Minority Interest'] },
-                { name: '현금', value: latest['Cash And Cash Equivalents'] }
+                { name: '총자산', value: bLatest['Total Assets'] },
+                { name: '총부채', value: bLatest['Total Liabilities'] },
+                { name: '주주지분', value: bLatest['Total Equity Gross Minority Interest'] },
+                { name: '현금', value: bLatest['Cash And Cash Equivalents'] }
             ];
             displayItems('balanceSheet', balanceItems);
         }
@@ -396,13 +398,13 @@
                     currentChart = null;
                 }
                 // yfinance history API 호출
-                const url = `/stock?symbol=${symbol}&history=1y`;
+                const url = `http://localhost:3000/stock?symbol=${symbol}&history=1y`;
                 const response = await fetch(url);
                 const data = await response.json();
                 const hist = data.history || {};
                 const dates = Object.keys(hist);
-                const prices = dates.map(date => hist[date]?.close || null);
-                if (dates.length === 0) {
+                const prices = dates.map(date => isValidNumber(hist[date]) ? hist[date] : null);
+                if (dates.length === 0 || prices.every(v => v === null)) {
                     ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
                     ctx.getContext('2d').fillText('차트 데이터가 없습니다', ctx.width / 2, ctx.height / 2);
                     return;
