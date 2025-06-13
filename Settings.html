@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <title>시장 동향 리포트 설정</title>
+  <style>
+    <? var css = getSettingsCSS(); ?>
+    <?= css ?>
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>시장 동향 리포트 설정</h1>
+    
+    <div id="message" style="display: none;"></div>
+    
+    <div class="form-group">
+      <label for="email">이메일 주소</label>
+      <input type="email" id="email" name="email" placeholder="example@example.com">
+    </div>
+    
+    <div class="form-group">
+      <label for="sendTime">발송 시간</label>
+      <input type="time" id="sendTime" name="sendTime">
+    </div>
+    
+    <div class="form-group">
+      <label>관심 분야</label>
+      <div class="sector-options">
+        <div class="sector-checkbox">
+          <input type="checkbox" id="sector-반도체" name="sectors" value="반도체">
+          <label for="sector-반도체">반도체</label>
+        </div>
+        <div class="sector-checkbox">
+          <input type="checkbox" id="sector-자동차" name="sectors" value="자동차">
+          <label for="sector-자동차">자동차</label>
+        </div>
+        <div class="sector-checkbox">
+          <input type="checkbox" id="sector-바이오" name="sectors" value="바이오">
+          <label for="sector-바이오">바이오</label>
+        </div>
+        <div class="sector-checkbox">
+          <input type="checkbox" id="sector-금융" name="sectors" value="금융">
+          <label for="sector-금융">금융</label>
+        </div>
+        <div class="sector-checkbox">
+          <input type="checkbox" id="sector-철강" name="sectors" value="철강">
+          <label for="sector-철강">철강</label>
+        </div>
+        <div class="sector-checkbox">
+          <input type="checkbox" id="sector-조선" name="sectors" value="조선">
+          <label for="sector-조선">조선</label>
+        </div>
+        <div class="sector-checkbox">
+          <input type="checkbox" id="sector-화학" name="sectors" value="화학">
+          <label for="sector-화학">화학</label>
+        </div>
+        <div class="sector-checkbox">
+          <input type="checkbox" id="sector-IT" name="sectors" value="IT">
+          <label for="sector-IT">IT</label>
+        </div>
+        <div class="sector-checkbox">
+          <input type="checkbox" id="sector-에너지" name="sectors" value="에너지">
+          <label for="sector-에너지">에너지</label>
+        </div>
+        <div class="sector-checkbox">
+          <input type="checkbox" id="sector-유통" name="sectors" value="유통">
+          <label for="sector-유통">유통</label>
+        </div>
+        <div class="sector-checkbox">
+          <input type="checkbox" id="sector-식품" name="sectors" value="식품">
+          <label for="sector-식품">식품</label>
+        </div>
+        <div class="sector-checkbox">
+          <input type="checkbox" id="sector-건설" name="sectors" value="건설">
+          <label for="sector-건설">건설</label>
+        </div>
+        <div class="sector-checkbox">
+          <input type="checkbox" id="sector-통신" name="sectors" value="통신">
+          <label for="sector-통신">통신</label>
+        </div>
+        <div class="sector-checkbox">
+          <input type="checkbox" id="sector-항공" name="sectors" value="항공">
+          <label for="sector-항공">항공</label>
+        </div>
+        <div class="sector-checkbox">
+          <input type="checkbox" id="sector-엔터테인먼트" name="sectors" value="엔터테인먼트">
+          <label for="sector-엔터테인먼트">엔터테인먼트</label>
+        </div>
+        <div class="sector-checkbox">
+          <input type="checkbox" id="sector-게임" name="sectors" value="게임">
+          <label for="sector-게임">게임</label>
+        </div>
+        <div class="sector-checkbox">
+          <input type="checkbox" id="sector-미디어" name="sectors" value="미디어">
+          <label for="sector-미디어">미디어</label>
+        </div>
+        <div class="sector-checkbox">
+          <input type="checkbox" id="sector-전자제품" name="sectors" value="전자제품">
+          <label for="sector-전자제품">전자제품</label>
+        </div>
+      </div>
+    </div>
+    
+    <div class="button-group">
+      <button id="saveBtn">저장</button>
+      <button id="testBtn">테스트 이메일 발송</button>
+    </div>
+  </div>
+  
+  <script>
+    <? var js = getSettingsJavaScript(); ?>
+    <?= js ?>
+  </script>
+</body>
+</html> 
